@@ -1,3 +1,4 @@
+import itertools
 import math
 
 
@@ -26,6 +27,22 @@ class NDShape:
             indices.append(remaining // stride)
             remaining %= stride
         return indices
+    
+    def slices(self):
+        n = len(self.shape)
+        for axis in range(n):
+            other_axes = [i for i in range(n) if i != axis]
+            other_dims = [self.shape[i] for i in other_axes]
+            ranges = [range(dim) for dim in other_dims]
+            for fixed_indices in itertools.product(*ranges):
+                line = []
+                for m in range(self.shape[axis]):
+                    index = [0] * n
+                    for i, pos in enumerate(other_axes):
+                        index[pos] = fixed_indices[i]
+                    index[axis] = m
+                    line.append(index)
+                yield line
 
     def __len__(self):
         return self.len
