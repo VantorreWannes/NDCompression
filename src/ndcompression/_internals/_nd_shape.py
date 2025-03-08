@@ -7,6 +7,7 @@ class NDShape:
         self.shape = shape
         self.strides = self.calculate_strides(shape)
         self.len = math.prod(self.shape)
+        self.dimensions = len(self.shape)
 
     @staticmethod
     def calculate_strides(shape: list[int]) -> list[int]:
@@ -28,36 +29,16 @@ class NDShape:
             remaining %= stride
         return indices
 
-    def slices(self):
-        rows_template = self.__rows_template()
-        for shape_index, length in enumerate(self.shape):
-            num_rows = math.prod(self.shape) // length
-            for row in itertools.islice(rows_template, num_rows):
-                for length_index, indecies in enumerate(row):
-                    indecies = list(indecies)
-                    indecies[shape_index] = length_index
-                    row[length_index] = tuple(indecies)
-                yield row
-
-    def __trimmed_shape(self):
-        for shape_index in range(len(self.shape)):
-            yield [
-                1 if i == shape_index else self.shape[i] for i in range(len(self.shape))
-            ]
-
-    def __column_parts(self):
-        for column in self.__trimmed_shape():
-            yield itertools.product(*[range(length) for length in column])
-
-    def __column(self):
-        for column in itertools.chain(*self.__column_parts()):
-            yield tuple(column)
-
-    def __rows_template(self):
-        column = self.__column()
-        for length in self.shape:
-            for _ in range((math.prod(self.shape) // length)):
-                yield list(itertools.repeat(next(column), length))
+    def multi_slices(self):
+        for axis, length in enumerate(self.shape):
+            ranges_before = [range(length) for length in self.shape[:axis]]
+            ranges_after = [range(length) for length in self.shape[axis + 1 :]]
+            for fixed in itertools.product(*(ranges_before + ranges_after)):
+                yield [list(fixed[:axis]) + [m] + list(fixed[axis:]) for m in range(length)]
+    
+    def flat_slices(self):
+        for slice in self.multi_slices():
+            yield [self.flat_index(indecies) for indecies in slice]
 
     def __len__(self):
         return self.len
