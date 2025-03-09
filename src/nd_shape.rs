@@ -63,6 +63,106 @@ pub fn generate_shapes(length: u64) -> Vec<Vec<u64>> {
         .collect()
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NDShape {
+    shape: Vec<usize>,
+    strides: Vec<usize>,
+    len: usize,
+    dimensions: usize,
+}
+
+impl NDShape {
+    pub fn new(shape: Vec<usize>) -> Self {
+        let dimensions = shape.len();
+        let strides = Self::calculate_strides(&shape);
+        let len = shape.iter().product();
+        Self {
+            shape,
+            strides,
+            len,
+            dimensions,
+        }
+    }
+
+    fn calculate_strides(shape: &[usize]) -> Vec<usize> {
+        let mut strides = Vec::with_capacity(shape.len());
+        let mut current_stride = 1;
+        for &dim in shape.iter().rev() {
+            strides.push(current_stride);
+            current_stride *= dim;
+        }
+        strides.reverse();
+        strides
+    }
+
+    pub fn flat_index(&self, indexes: &[usize]) -> usize {
+        indexes
+            .iter()
+            .zip(&self.strides)
+            .map(|(&i, &s)| i * s)
+            .sum()
+    }
+
+    pub fn multi_index(&self, index: usize) -> Vec<usize> {
+        let mut remaining = index;
+        self.strides
+            .iter()
+            .map(|&stride| {
+                let idx = remaining / stride;
+                remaining %= stride;
+                idx
+            })
+            .collect()
+    }
+
+    pub fn multi_slices(&self) -> Vec<Vec<Vec<usize>>> {
+        (0..self.dimensions)
+            .flat_map(|axis| {
+                let axis_len = self.shape[axis];
+                let ranges = self.shape
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, &d)| (i != axis).then(|| 0..d))
+                    .collect_vec();
+                
+                ranges
+                    .into_iter()
+                    .multi_cartesian_product()
+                    .map(move |indices| {
+                        (0..axis_len)
+                            .map(|m| {
+                                let mut cloned = indices.clone();
+                                cloned.insert(axis, m);
+                                cloned
+                            })
+                            .collect_vec()
+                    })
+                    .collect_vec()
+            })
+            .collect_vec()
+    }
+
+    pub fn flat_slices(&self) -> Vec<Vec<usize>> {
+        self.multi_slices()
+            .into_iter()
+            .map(|slice| {
+                slice
+                    .into_iter()
+                    .map(|indices| self.flat_index(&indices))
+                    .collect_vec()
+            })
+            .collect_vec()
+    }
+
+    pub fn len(&self) -> usize {
+        self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,5 +170,11 @@ mod tests {
     #[test]
     fn test_all_shapes() {
         println!("{:?}", generate_shapes(12));
+    }
+
+    #[test]
+    fn test_ndshape() {
+        let nd_shape = NDShape::new(vec![2, 2]);
+        println!("{:?}", nd_shape.flat_slices());
     }
 }
