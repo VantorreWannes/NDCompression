@@ -1,3 +1,4 @@
+import random
 from ndcompression._internals._nd_shape import NDShape
 
 class NDArray:
@@ -30,6 +31,14 @@ class NDArray:
             )
         self.data[index] = value
 
+    def slices(self):
+        for slice in self.ndshape.flat_slices():
+            yield [self.data[index] for index in slice]
+
 class LinearNDArray(NDArray):
     def __init__(self, shape: NDShape):
         super().__init__(shape, range(len(shape)))
+
+class RandomNDArray(NDArray):
+    def __init__(self, shape: NDShape, max_value: int = 255):
+        super().__init__(shape, [random.randint(0, max_value) for _ in range(len(shape))])
