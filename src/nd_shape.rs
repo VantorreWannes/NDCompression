@@ -1,12 +1,12 @@
 use itertools::Itertools;
 use std::collections::VecDeque;
 
-fn generate_factorizations(number: u64) -> Vec<Vec<u64>> {
+fn generate_factorizations(number: usize) -> Vec<Vec<usize>> {
     let mut factorizations = Vec::new();
     let mut stack = VecDeque::from([(number, 2, Vec::new())]);
 
     while let Some((n, d, path)) = stack.pop_back() {
-        let sqrt_n = (n as f64).sqrt() as u64;
+        let sqrt_n = (n as f64).sqrt() as usize;
         (d..=sqrt_n).filter(|&i| n % i == 0).for_each(|i| {
             let q = n / i;
             let mut new_path = path.clone();
@@ -55,7 +55,7 @@ fn permute_unique<T: Eq + Ord + Clone>(
     }
 }
 
-pub fn generate_shapes(length: u64) -> Vec<Vec<u64>> {
+pub fn generate_shapes(length: usize) -> Vec<Vec<usize>> {
     let factorizations = generate_factorizations(length);
     factorizations
         .into_iter()
@@ -175,6 +175,6 @@ mod tests {
     #[test]
     fn test_ndshape() {
         let nd_shape = NDShape::new(vec![2, 2]);
-        println!("{:?}", nd_shape.flat_slices());
+        println!("{:?}", nd_shape.multi_slices());
     }
 }

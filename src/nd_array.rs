@@ -31,21 +31,32 @@ impl<'a> NDArray<'a> {
         true
     }
 
-    pub fn multi_constant_slices(&self) -> Vec<Vec<u8>> {
+    pub fn flat_constant_slices(&self) -> Vec<Vec<usize>> {
         self.nd_shape
             .flat_slices()
-            .iter()
-            .map(|slice_indexes| {
-                slice_indexes
+            .into_iter()
+            .filter(|slice_indexes| {
+                let slice_data = slice_indexes
                     .into_iter()
                     .map(|&index| self.data[index])
-                    .collect::<Vec<u8>>()
+                    .collect::<Vec<u8>>();
+                self.is_constant_slice(&slice_data)
             })
-            .filter(|slice| self.is_constant_slice(slice))
+            .collect()
+    }
+
+    pub fn multi_constant_slices(&self) -> Vec<Vec<Vec<usize>>> {
+        self.flat_constant_slices()
+            .into_iter()
+            .map(|indecies| {
+                indecies
+                    .iter()
+                    .map(|&index| self.nd_shape.multi_index(index))
+                    .collect()
+            })
             .collect()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
